@@ -1,0 +1,61 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE hibernate-mapping PUBLIC
+  "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+  "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd"
+
+  [
+    <!ENTITY % globals SYSTEM "classpath://repository/hbm/globals.dtd">
+    %globals;
+  ]
+>
+
+<hibernate-mapping auto-import="false">
+  <class name="com.krishagni.auth.domain.AuthToken">
+    <id name="token" column="TOKEN"/>
+
+    <many-to-one name="user" column="USER_ID" class="&userClass;"/>
+
+    <property name="ipAddress" not-null="true" column="IP_ADDRESS"/>
+    
+    <many-to-one name="loginAuditLog" not-null="true" column="LOGIN_AUDIT_LOG_ID" unique-key="true"/>
+    
+    <query name="getByKey">
+      select
+        t
+      from
+        com.krishagni.auth.domain.AuthToken t
+      where
+        t.token = :token
+    </query>
+    
+    <query name="deleteInactiveAuthTokens">
+      <![CDATA[
+      delete
+      from
+        com.krishagni.auth.domain.AuthToken t
+      where
+        t.loginAuditLog.id in (
+          select
+            loginAuditLog.id
+          from
+            com.krishagni.auth.domain.UserApiCallLog apiLog
+            join apiLog.loginAuditLog loginAuditLog
+          where
+            loginAuditLog.id = t.loginAuditLog.id
+          group by
+            loginAuditLog.id
+          having
+            max(apiLog.callStartTime) < :latestCallTime
+        )
+      ]]>
+    </query>
+    
+    <query name="deleteAuthTokensByUserId">
+      delete
+      from
+        com.krishagni.auth.domain.AuthToken t
+      where
+        t.user.id in (:ids)
+    </query>
+  </class>
+</hibernate-mapping>

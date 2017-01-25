@@ -1,0 +1,46 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE hibernate-mapping PUBLIC
+  "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+  "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd"
+
+  [
+    <!ENTITY % globals SYSTEM "classpath://repository/hbm/globals.dtd">
+    %globals;
+  ]
+>
+
+<hibernate-mapping>
+  <class name="com.krishagni.auth.domain.LoginAuditLog">
+    <id name="id" column="IDENTIFIER">
+      <generator class="native">
+        <param name="sequence">LoginAuditLogsSeq</param>
+      </generator>
+    </id>
+    
+    <many-to-one name="user" column="USER_ID" not-null="true" class="&userClass;"/>
+
+    <property name="ipAddress" column="IP_ADDRESS" not-null="true"/>
+
+    <property name="loginTime" column="LOGIN_TIME" not-null="true"/>
+
+    <property name="logoutTime" column="LOGOUT_TIME"/>
+    
+    <property name="loginSuccessful" column="IS_LOGIN_SUCCESSFUL"/>
+    
+    <set name="apiLogs">
+      <key column="LOGIN_AUDIT_LOG_ID"/>
+      <one-to-many class="com.krishagni.auth.domain.UserApiCallLog"/>
+    </set>
+    
+    <query name="getLogsByUserId">
+      select
+        l
+      from
+        com.krishagni.auth.domain.LoginAuditLog l
+      where
+        l.user.id = :userId
+      order by
+        l.id desc
+    </query>
+  </class>
+</hibernate-mapping>

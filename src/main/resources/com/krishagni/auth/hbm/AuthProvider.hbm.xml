@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE hibernate-mapping PUBLIC
+  "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+  "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping auto-import="false">
+  <class name="com.krishagni.auth.domain.AuthProvider">
+    <id name="id" column="IDENTIFIER">
+      <generator class="native">
+        <param name="sequence">AuthProvidersSeq</param>
+      </generator>
+    </id>
+	        
+    <property name="authType" column="AUTH_TYPE"/>
+    
+    <map name="props" lazy="false">
+      <key column="AUTH_PROVIDER_ID"/>
+      <map-key column="NAME" type="string"/>
+      <element column="VALUE" type="string" not-null="true"/>
+    </map>
+            
+    <property name="implClass" column="IMPL_CLASS"/>
+            
+    <query name="getProviderByType">
+      select
+        p
+      from
+        com.krishagni.auth.domain.AuthProvider p
+      where
+        p.authType = :authType
+    </query>    
+  </class>
+</hibernate-mapping>

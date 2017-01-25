@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+  http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+
+  <changeSet id="Auth domains" author="vpawar">
+    <createTable tableName="${hostAppDbPrefix}_AUTH_DOMAINS">
+      <column name="IDENTIFIER" type="${int.type}" autoIncrement="${autoIncrement}">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+
+      <column name="DOMAIN_NAME" type="${text.type}(64)">
+        <constraints unique="true" nullable="false" />
+      </column>
+
+      <column name="AUTH_TYPE" type="${text.type}(64)">
+        <constraints nullable="false" />
+      </column>
+    </createTable>
+  </changeSet>
+
+  <changeSet id="Auth domains identifier sequence" dbms="oracle" author="vpawar">
+    <createSequence sequenceName="${hostAppDbPrefix}_AUTH_DOMAINS_SEQ" startValue="1" incrementBy="1" ordered="true"/>
+  </changeSet>
+
+  <changeSet id="Auth providers table" author="vpawar">
+    <createTable tableName="${hostAppDbPrefix}_AUTH_PROVIDERS">
+      <column name="IDENTIFIER" type="${int.type}" autoIncrement="${autoIncrement}">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+
+      <column name="AUTH_TYPE" type="${text.type}(64)">
+        <constraints unique="true" nullable="false" />
+      </column>
+
+      <column name="IMPL_CLASS" type="${text.type}(255)">
+        <constraints nullable="false" />
+      </column>
+    </createTable>
+  </changeSet>
+
+  <changeSet id="Auth providers identifier sequence" author="vpawar" dbms="oracle">
+    <createSequence sequenceName="${hostAppDbPrefix}_AUTH_PROVIDERS_SEQ" startValue="1" incrementBy="1" ordered="true" />
+  </changeSet>
+
+  <changeSet id="Auth provider properties" author="vpawar">
+    <createTable tableName="${hostAppDbPrefix}_AUTH_PROVIDER_PROPS">
+      <column name="AUTH_PROVIDER_ID" type="${int.type}">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="NAME" type="${text.type}(32)">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="VALUE" type="${text.type}(255)">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+  </changeSet>
+
+  <changeSet id="FK on auth type of auth domains" author="vpawar" >
+    <addForeignKeyConstraint constraintName="FK_AUTH_DOMAINS_AUTH_TYPE"
+      baseTableName="${hostAppDbPrefix}_AUTH_DOMAINS" baseColumnNames="AUTH_TYPE"
+      referencedTableName="${hostAppDbPrefix}_AUTH_PROVIDERS" referencedColumnNames="AUTH_TYPE"/>
+  </changeSet>
+
+  <changeSet id="FK on auth provider of auth provider props" author="vpawar" >
+    <addForeignKeyConstraint constraintName="FK_AP_PROPS_AP_ID"
+      baseTableName="${hostAppDbPrefix}_AUTH_PROVIDER_PROPS" baseColumnNames="AUTH_PROVIDER_ID"
+      referencedTableName="${hostAppDbPrefix}_AUTH_PROVIDERS" referencedColumnNames="IDENTIFIER"/>
+  </changeSet>
+
+  <changeSet id="Login audit logs table" author="vpawar" >
+    <createTable tableName="${hostAppDbPrefix}_LOGIN_AUDIT_LOGS">
+      <column name="IDENTIFIER" type="${int.type}" autoIncrement="${autoIncrement}">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+
+      <column name="USER_ID" type="${int.type}">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="IP_ADDRESS" type="${text.type}(32)">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="LOGIN_TIME" type="${nullable.ts.type}">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="LOGOUT_TIME" type="${nullable.ts.type}">
+        <constraints nullable="true"/>
+      </column>
+
+      <column name="IS_LOGIN_SUCCESSFUL" type="${boolean.type}">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+  </changeSet>
+
+  <changeSet id="Login audit logs identifier sequence" author="vpawar" dbms="oracle">
+    <createSequence sequenceName="${hostAppDbPrefix}_LOGIN_AUDIT_LOGS_SEQ" startValue="1" incrementBy="1" ordered="true" />
+  </changeSet>
+
+  <changeSet id="Auth tokens" author="vpawar">
+    <createTable tableName="${hostAppDbPrefix}_AUTH_TOKENS">
+      <column name="TOKEN" type="${text.type}(64)">
+        <constraints primaryKey="true"/>
+      </column>
+
+      <column name="USER_ID" type="${int.type}">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="IP_ADDRESS" type="${text.type}(32)">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="LOGIN_AUDIT_LOG_ID" type="${int.type}">
+        <constraints nullable="false" unique="true"/>
+      </column>
+    </createTable>
+  </changeSet>
+
+  <changeSet id="FK on login audit log of auth tokens" author="vpawar">
+    <addForeignKeyConstraint constraintName="FK_AUTH_TOKENS_LA_LOG_ID"
+      baseTableName="${hostAppDbPrefix}_AUTH_TOKENS" baseColumnNames="LOGIN_AUDIT_LOG_ID"
+      referencedTableName="${hostAppDbPrefix}_LOGIN_AUDIT_LOGS" referencedColumnNames="IDENTIFIER"/>
+  </changeSet>
+
+  <changeSet id="Forgot password tokens" author="vpawar">
+    <createTable tableName="${hostAppDbPrefix}_FORGOT_PASSWORD_TOKENS">
+      <column name="USER_ID" type="${int.type}">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+
+      <column name="TOKEN" type="${text.type}(64)">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="CREATED_DATE" type="${timestamp.type}">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+  </changeSet>
+
+  <changeSet id="User api calls log table" author="vpawar">
+    <createTable tableName="${hostAppDbPrefix}_USER_API_CALLS_LOG">
+      <column name="IDENTIFIER" type="${int.type}" autoIncrement="${autoIncrement}">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+
+      <column name="USER_ID" type="${int.type}">
+        <constraints nullable="false" />
+      </column>
+
+      <column name="URL" type="${text.type}(255)">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="METHOD" type="${text.type}(16)">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="RESPONSE_CODE" type="${text.type}(64)">
+        <constraints nullable="false"/>
+      </column>
+
+      <column name="CALL_START_TIME" type="${nullable.ts.type}"/>
+
+      <column name="CALL_END_TIME" type="${nullable.ts.type}"/>
+
+      <column name="LOGIN_AUDIT_LOG_ID" type="${int.type}">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+  </changeSet>
+
+  <changeSet author="mdnasim" id="Foreign key on login event of api calls log table">
+    <addForeignKeyConstraint constraintName="FK_API_CALL_LOG_AUDIT_LOG_ID"
+      baseTableName="${hostAppDbPrefix}_USER_API_CALLS_LOG" baseColumnNames="LOGIN_AUDIT_LOG_ID"
+      referencedTableName="${hostAppDbPrefix}_LOGIN_AUDIT_LOGS" referencedColumnNames="IDENTIFIER"/>
+  </changeSet>
+</databaseChangeLog>
