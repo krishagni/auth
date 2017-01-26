@@ -8,10 +8,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.hibernate.Hibernate;
+import org.opensaml.saml2.core.Attribute;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.saml.SAMLCredential;
 
 import com.krishagni.auth.AuthConfig;
 import com.krishagni.auth.Util;
@@ -27,8 +34,11 @@ import com.krishagni.auth.repository.AuthDaoFactory;
 import com.krishagni.auth.services.UserAuthenticationService;
 import com.krishagni.commons.domain.IUser;
 import com.krishagni.commons.errors.AppException;
+import com.krishagni.commons.util.MessageUtil;
 
 public abstract class UserAuthenticationServiceImpl implements UserAuthenticationService {
+
+	private static final Log logger = LogFactory.getLog(UserAuthenticationServiceImpl.class);
 
 	private AuthDaoFactory authDaoFactory;
 
@@ -47,7 +57,7 @@ public abstract class UserAuthenticationServiceImpl implements UserAuthenticatio
 		IUser user = null;
 
 		try {
-			user = getUser(loginDetail);
+			user = getUser(loginDetail.getLoginName(), loginDetail.getDomainName());
 			if (user == null) {
 				throw AppException.userError(AuthErrorCode.INVALID_CREDENTIALS);
 			} else if (user.isLocked()) {
@@ -163,8 +173,50 @@ public abstract class UserAuthenticationServiceImpl implements UserAuthenticatio
 		cal.add(Calendar.MINUTE, -authConfig.getTokenInactiveIntervalInMinutes());
 		authDaoFactory.getAuthDao().deleteInactiveAuthTokens(cal.getTime());
 	}
-	
-	public abstract IUser getUser(LoginDetail loginDetail);
+
+	@Override
+	public UserDetails loadUserByUsername(String username)
+	throws UsernameNotFoundException {
+		return getUser(username, null);
+	}
+
+	@Override
+	public Object loadUserBySAML(SAMLCredential credential) throws UsernameNotFoundException {
+		if (logger.isDebugEnabled()) {
+			for (Attribute attr : credential.getAttributes()) {
+				logger.debug(String.format(
+					"Credential attr: %s (%s) = %s",
+					attr.getName(), attr.getFriendlyName(), credential.getAttributeAsString(attr.getName())));
+			}
+		}
+
+		//
+		// The assumption is - there can be only one SAML auth provider
+		// We should perhaps use SAML local entity ID
+		//
+		AuthDomain domain = authDaoFactory.getAuthDao().getAuthDomainByType("saml");
+
+		Map<String, String> props = domain.getAuthProvider().getProps();
+		String loginNameAttr = props.get("loginNameAttr");
+		String emailAttr     = props.get("emailAddressAttr");
+
+		IUser user = null;
+		if (StringUtils.isNotBlank(loginNameAttr)) {
+			user = getUser(getCredentialAttrValue(credential, loginNameAttr), domain.getName());
+		} else if (StringUtils.isNotBlank(emailAttr)) {
+			user = getUserByEmailAddress(getCredentialAttrValue(credential, emailAttr));
+		}
+
+		if (user == null) {
+			throw new UsernameNotFoundException(MessageUtil.getInstance().getMessage("user_not_found"));
+		}
+
+		return user;
+	}
+
+	public abstract IUser getUser(String username, String domain);
+
+	public abstract IUser getUserByEmailAddress(String emailAddress);
 
 	public abstract AuthDomain getAuthDomain(IUser user);
 
@@ -206,5 +258,17 @@ public abstract class UserAuthenticationServiceImpl implements UserAuthenticatio
 		loginAuditLog.setLoginSuccessful(loginSuccessful);
 		authDaoFactory.getAuthDao().saveLoginAuditLog(loginAuditLog);
 		return loginAuditLog;
+	}
+
+	private String getCredentialAttrValue(SAMLCredential credential, String attrName) {
+		Attribute attr = credential.getAttributes().stream()
+			.filter(a -> attrName.equals(a.getName()) || attrName.equals(a.getFriendlyName()))
+			.findFirst().orElse(null);
+
+		if (attr == null) {
+			return null;
+		}
+
+		return credential.getAttributeAsString(attr.getName());
 	}
 }
