@@ -179,7 +179,7 @@
     </createTable>
   </changeSet>
 
-  <changeSet author="mdnasim" id="Foreign key on login event of api calls log table">
+  <changeSet id="Foreign key on login event of api calls log table" author="vpawar">
     <addForeignKeyConstraint constraintName="FK_API_CALL_LOG_AUDIT_LOG_ID"
       baseTableName="${hostAppDbPrefix}_USER_API_CALLS_LOG" baseColumnNames="LOGIN_AUDIT_LOG_ID"
       referencedTableName="${hostAppDbPrefix}_LOGIN_AUDIT_LOGS" referencedColumnNames="IDENTIFIER"/>
